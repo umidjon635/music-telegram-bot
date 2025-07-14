@@ -1,12 +1,10 @@
 import os
 from dotenv import load_dotenv
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
 
-load_dotenv()
+load_dotenv()  # Bu MUHIM
 
-client_id = os.getenv("d36d17f7f40d4aa18ecbbb12278f8be3")
-client_secret = os.getenv("432339d8e9cd4a089f9003c0c82becd7")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+client_id = os.getenv("SPOTIPY_CLIENT_ID")
+client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
 
-auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
-sp = spotipy.Spotify(auth_manager=auth_manager)
+print("BOT_TOKEN:", BOT_TOKEN)  # 👈 Test qilish uchun

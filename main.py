@@ -1,49 +1,59 @@
-import os
+import logging
+from yt_dlp import YoutubeDL
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
-# Spotify API sozlamalari
-SPOTIFY_CLIENT_ID = os.getenv("d36d17f7f40d4aa18ecbbb12278f8be3")
-SPOTIFY_CLIENT_SECRET = os.getenv("432339d8e9cd4a089f9003c0c82becd7")
-
-spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-    client_id=SPOTIFY_CLIENT_ID,
-    client_secret=SPOTIFY_CLIENT_SECRET
-))
+# Logger sozlash
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 # /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎵 Qaysi musiqani izlaymiz? Faqat nomini yuboring.")
+    await update.message.reply_text("Salom! Qaysi qo‘shiqni izlaymiz? 🎵")
 
-# Foydalanuvchi xabar yuborganida
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Musiqa qidirish va yuborish
+async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.message.text
-    result = spotify.search(q=query, type='track', limit=1)
+    await update.message.reply_text("🔍 Qidirilmoqda...")
 
-    if result['tracks']['items']:
-        track = result['tracks']['items'][0]
-        name = track['name']
-        artist = track['artists'][0]['name']
-        url = track['external_urls']['spotify']
-        message = f"🎧 {name} - {artist}\n🔗 {url}"
-    else:
-        message = "❌ Musiqa topilmadi."
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'quiet': True,
+        'outtmpl': '%(title)s.%(ext)s',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+    }
 
-    await update.message.reply_text(message)
+    with YoutubeDL(ydl_opts) as ydl:
+        try:
+            info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
+            url = info['webpage_url']
+            title = info['title']
+            await update.message.reply_text(f"Topildi: {title}\nYuklanmoqda...")
+
+            ydl.download([url])
+            file_name = ydl.prepare_filename(info).replace(".webm", ".mp3").replace(".m4a", ".mp3")
+
+            await update.message.reply_audio(audio=open(file_name, 'rb'), title=title)
+        except Exception as e:
+            await update.message.reply_text(f"Xatolik yuz berdi: {str(e)}")
 
 # Botni ishga tushirish
-async def main():
-    TOKEN = os.getenv("BOT_TOKEN")
-    app = ApplicationBuilder().token(TOKEN).build()
+def main():
+    from config import BOT_TOKEN
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_music))
 
-    print("✅ Bot ishga tushdi...")
-    await app.run_polling()
+    app.run_polling()
 
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+if __name__ == '__main__':
+    main()
