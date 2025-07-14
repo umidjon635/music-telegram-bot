@@ -1,7 +1,15 @@
+# Virtual environment
+venv/
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Env file
 .env
-venv/
-.venv/
-downloads/
-cookies.txt
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
